@@ -1,4 +1,4 @@
-package classroom
+package domain
 
 import (
 	"fmt"

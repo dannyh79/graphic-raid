@@ -1,4 +1,4 @@
-package classroom
+package domain
 
 import (
 	"fmt"
@@ -9,18 +9,11 @@ type Teacher struct {
 	Writer io.Writer
 }
 
-type Sentence string
-
 const (
 	Greet   Sentence = "greet"
 	Ask     Sentence = "ask"
 	Respond Sentence = "respond"
 )
-
-type Message struct {
-	Type Sentence
-	To   string
-}
 
 func (t *Teacher) getName() string { return "Teacher" }
 func (t *Teacher) say(s string)    { fmt.Fprintf(t.Writer, "%s: %s\n", t.getName(), s) }

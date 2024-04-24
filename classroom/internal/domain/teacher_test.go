@@ -1,4 +1,4 @@
-package classroom_test
+package domain_test
 
 import (
 	"bytes"
@@ -7,32 +7,32 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	c "github.com/dannyh79/graphic-raid/classroom/internal"
+	d "github.com/dannyh79/graphic-raid/classroom/internal/domain"
 )
 
 var _ = Describe("Teacher", func() {
 	var buf bytes.Buffer
-	t := c.Teacher{&buf}
+	t := d.Teacher{&buf}
 
 	BeforeEach(func() {
 		buf.Reset()
 	})
 
 	It("greets students", func() {
-		t.Say(c.Message{Type: c.Greet})
+		t.Say(d.Message{Type: d.Greet})
 
 		Expect(buf.String()).To(Equal("Teacher: Guys, are you ready?\n"))
 	})
 
 	It("gives a quiz", func() {
-		t.Say(c.Message{Type: c.Ask})
+		t.Say(d.Message{Type: d.Ask})
 
 		Expect(buf.String()).To(MatchRegexp(`Teacher: \d+ [\+|-|\*|/] \d+ = \?\n`))
 	})
 
 	It("responds to answer", func() {
 		to := "C"
-		t.Say(c.Message{Type: c.Respond, To: to})
+		t.Say(d.Message{Type: d.Respond, To: to})
 
 		Expect(buf.String()).To(Equal(fmt.Sprintf("Teacher: %s, you are right!\n", to)))
 	})

@@ -4,6 +4,8 @@ import (
 	"io"
 	"math/rand"
 	"time"
+
+	d "github.com/dannyh79/graphic-raid/classroom/internal/domain"
 )
 
 type TimeSleeper interface {
@@ -17,24 +19,24 @@ func (s Sleeper) Sleep(d time.Duration) {
 }
 
 func HoldMathQuiz(w io.Writer, s TimeSleeper) {
-	t := NewTeacher(w)
-	ss := map[string]*Student{}
+	t := d.NewTeacher(w)
+	ss := map[string]*d.Student{}
 	for _, n := range []string{"A", "B", "C", "D", "E"} {
-		ss[n] = NewStudent(w, n)
+		ss[n] = d.NewStudent(w, n)
 	}
 
-	t.Say(Message{Type: Greet})
+	t.Say(d.Message{Type: d.Greet})
 
 	s.Sleep(3 * time.Second)
 
-	t.Say(Message{Type: Ask})
+	t.Say(d.Message{Type: d.Ask})
 
 	s.Sleep(time.Duration(rand.Intn(3-1)+1) * time.Second)
 
-	ss["C"].Say(Message{Type: Answer})
-	t.Say(Message{Type: Respond, To: "C"})
-	ss["A"].Say(Message{Type: Respond, To: "C"})
-	ss["B"].Say(Message{Type: Respond, To: "C"})
-	ss["D"].Say(Message{Type: Respond, To: "C"})
-	ss["E"].Say(Message{Type: Respond, To: "C"})
+	ss["C"].Say(d.Message{Type: d.Answer})
+	t.Say(d.Message{Type: d.Respond, To: "C"})
+	ss["A"].Say(d.Message{Type: d.Respond, To: "C"})
+	ss["B"].Say(d.Message{Type: d.Respond, To: "C"})
+	ss["D"].Say(d.Message{Type: d.Respond, To: "C"})
+	ss["E"].Say(d.Message{Type: d.Respond, To: "C"})
 }
