@@ -1,7 +1,6 @@
 package classroom
 
 import (
-	"fmt"
 	"io"
 	"math/rand"
 	"time"
@@ -19,6 +18,10 @@ func (s Sleeper) Sleep(d time.Duration) {
 
 func HoldMathQuiz(w io.Writer, s TimeSleeper) {
 	t := Teacher{w}
+	ss := map[string]*Student{}
+	for _, n := range []string{"A", "B", "C", "D", "E"} {
+		ss[n] = &Student{w, n}
+	}
 
 	t.Say(Sentence{Type: Greet})
 
@@ -28,10 +31,10 @@ func HoldMathQuiz(w io.Writer, s TimeSleeper) {
 
 	s.Sleep(time.Duration(rand.Intn(3-1)+1) * time.Second)
 
-	fmt.Fprintf(w, "Student C: 1 + 1 = 2!\n")
+	ss["C"].Say(Sentence{Type: Answer})
 	t.Say(Sentence{Type: Respond, To: "C"})
-	fmt.Fprintf(w, "Student A: C, you win.\n")
-	fmt.Fprintf(w, "Student B: C, you win.\n")
-	fmt.Fprintf(w, "Student D: C, you win.\n")
-	fmt.Fprintf(w, "Student E: C, you win.\n")
+	ss["A"].Say(Sentence{Type: Respond, To: "C"})
+	ss["B"].Say(Sentence{Type: Respond, To: "C"})
+	ss["D"].Say(Sentence{Type: Respond, To: "C"})
+	ss["E"].Say(Sentence{Type: Respond, To: "C"})
 }

@@ -17,7 +17,7 @@ const (
 	Respond SentenceType = "respond"
 )
 
-const name string = "Teacher"
+const teacherPrefix string = "Teacher"
 
 type Sentence struct {
 	Type SentenceType
@@ -25,7 +25,7 @@ type Sentence struct {
 }
 
 func (t *Teacher) Say(s Sentence) {
-	say := func(s string) { fmt.Fprintf(t.Writer, "%s: %s\n", name, s) }
+	say := func(s string) { fmt.Fprintf(t.Writer, "%s: %s\n", teacherPrefix, s) }
 
 	switch s.Type {
 	case Greet:
