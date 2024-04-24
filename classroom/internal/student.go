@@ -25,3 +25,5 @@ func (s *Student) Say(m Message) {
 		s.say(fmt.Sprintf("%s, you win.", m.To))
 	}
 }
+
+func NewStudent(w io.Writer, n string) *Student { return &Student{w, n} }

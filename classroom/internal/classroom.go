@@ -17,10 +17,10 @@ func (s Sleeper) Sleep(d time.Duration) {
 }
 
 func HoldMathQuiz(w io.Writer, s TimeSleeper) {
-	t := Teacher{w}
+	t := NewTeacher(w)
 	ss := map[string]*Student{}
 	for _, n := range []string{"A", "B", "C", "D", "E"} {
-		ss[n] = &Student{w, n}
+		ss[n] = NewStudent(w, n)
 	}
 
 	t.Say(Message{Type: Greet})

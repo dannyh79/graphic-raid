@@ -35,3 +35,5 @@ func (t *Teacher) Say(m Message) {
 		t.say(fmt.Sprintf("%s, you are right!", m.To))
 	}
 }
+
+func NewTeacher(w io.Writer) *Teacher { return &Teacher{w} }
