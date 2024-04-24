@@ -11,18 +11,17 @@ type Student struct {
 }
 
 const (
-	Answer SentenceType = "answer"
+	Answer Sentence = "answer"
 )
 
-const studentPrefix = "Student"
+func (s *Student) getName() string { return fmt.Sprintf("Student %s", s.Name) }
+func (s *Student) say(str string)  { fmt.Fprintf(s.Writer, "%s: %s\n", s.getName(), str) }
 
-func (s *Student) Say(sentence Sentence) {
-	say := func(str string) { fmt.Fprintf(s.Writer, "%s %s: %s\n", studentPrefix, s.Name, str) }
-
-	switch sentence.Type {
+func (s *Student) Say(m Message) {
+	switch m.Type {
 	case Answer:
-		say(fmt.Sprintf("1 + 1 = 2!"))
+		s.say(fmt.Sprintf("1 + 1 = 2!"))
 	case Respond:
-		say(fmt.Sprintf("%s, you win.", sentence.To))
+		s.say(fmt.Sprintf("%s, you win.", m.To))
 	}
 }

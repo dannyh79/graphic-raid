@@ -18,14 +18,14 @@ var _ = Describe("Student", func() {
 	})
 
 	It("answers the quiz", func() {
-		s.Say(c.Sentence{Type: c.Answer})
+		s.Say(c.Message{Type: c.Answer})
 
 		Expect(buf.String()).To(MatchRegexp(`Student Someone: \d+ [\+|-|\*|/] \d+ = \d+\!\n`))
 	})
 
 	It("responds to answer", func() {
 		to := "Another"
-		s.Say(c.Sentence{Type: c.Respond, To: to})
+		s.Say(c.Message{Type: c.Respond, To: to})
 
 		Expect(buf.String()).To(Equal("Student Someone: Another, you win.\n"))
 	})

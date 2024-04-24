@@ -19,20 +19,20 @@ var _ = Describe("Teacher", func() {
 	})
 
 	It("greets students", func() {
-		t.Say(c.Sentence{Type: c.Greet})
+		t.Say(c.Message{Type: c.Greet})
 
 		Expect(buf.String()).To(Equal("Teacher: Guys, are you ready?\n"))
 	})
 
 	It("gives a quiz", func() {
-		t.Say(c.Sentence{Type: c.Ask})
+		t.Say(c.Message{Type: c.Ask})
 
 		Expect(buf.String()).To(MatchRegexp(`Teacher: \d+ [\+|-|\*|/] \d+ = \?\n`))
 	})
 
 	It("responds to answer", func() {
 		to := "C"
-		t.Say(c.Sentence{Type: c.Respond, To: to})
+		t.Say(c.Message{Type: c.Respond, To: to})
 
 		Expect(buf.String()).To(Equal(fmt.Sprintf("Teacher: %s, you are right!\n", to)))
 	})

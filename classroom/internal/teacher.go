@@ -9,30 +9,29 @@ type Teacher struct {
 	Writer io.Writer
 }
 
-type SentenceType string
+type Sentence string
 
 const (
-	Greet   SentenceType = "greet"
-	Ask     SentenceType = "ask"
-	Respond SentenceType = "respond"
+	Greet   Sentence = "greet"
+	Ask     Sentence = "ask"
+	Respond Sentence = "respond"
 )
 
-const teacherPrefix string = "Teacher"
-
-type Sentence struct {
-	Type SentenceType
+type Message struct {
+	Type Sentence
 	To   string
 }
 
-func (t *Teacher) Say(s Sentence) {
-	say := func(s string) { fmt.Fprintf(t.Writer, "%s: %s\n", teacherPrefix, s) }
+func (t *Teacher) getName() string { return "Teacher" }
+func (t *Teacher) say(s string)    { fmt.Fprintf(t.Writer, "%s: %s\n", t.getName(), s) }
 
-	switch s.Type {
+func (t *Teacher) Say(m Message) {
+	switch m.Type {
 	case Greet:
-		say("Guys, are you ready?")
+		t.say("Guys, are you ready?")
 	case Ask:
-		say("1 + 1 = ?")
+		t.say("1 + 1 = ?")
 	case Respond:
-		say(fmt.Sprintf("%s, you are right!", s.To))
+		t.say(fmt.Sprintf("%s, you are right!", m.To))
 	}
 }
