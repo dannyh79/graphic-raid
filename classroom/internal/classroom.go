@@ -18,16 +18,18 @@ func (s Sleeper) Sleep(d time.Duration) {
 }
 
 func HoldMathQuiz(w io.Writer, s TimeSleeper) {
-	fmt.Fprintf(w, "Teacher: Guys, are you ready?\n")
+	t := Teacher{w}
+
+	t.Say(Sentence{Type: Greet})
 
 	s.Sleep(3 * time.Second)
 
-	fmt.Fprintf(w, "Teacher: 1 + 1 = ?\n")
+	t.Say(Sentence{Type: Ask})
 
 	s.Sleep(time.Duration(rand.Intn(3-1)+1) * time.Second)
 
 	fmt.Fprintf(w, "Student C: 1 + 1 = 2!\n")
-	fmt.Fprintf(w, "Teacher: C, you are right!\n")
+	t.Say(Sentence{Type: Respond, To: "C"})
 	fmt.Fprintf(w, "Student A: C, you win.\n")
 	fmt.Fprintf(w, "Student B: C, you win.\n")
 	fmt.Fprintf(w, "Student D: C, you win.\n")
