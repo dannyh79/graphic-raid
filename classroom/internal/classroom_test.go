@@ -5,40 +5,60 @@ import (
 	"time"
 
 	classroom "github.com/dannyh79/graphic-raid/classroom/internal"
+	"github.com/dannyh79/graphic-raid/classroom/internal/mocks"
+	"go.uber.org/mock/gomock"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("HoldMathQuiz", func() {
-	var buf bytes.Buffer
-	output := func() string { return buf.String() }
+	var (
+		mockCtrl    *gomock.Controller
+		mockSleeper *mocks.MockTimeSleeper
+		buf         bytes.Buffer
+	)
 
 	BeforeEach(func() {
+		mockCtrl = gomock.NewController(GinkgoT())
+		mockSleeper = mocks.NewMockTimeSleeper(mockCtrl)
 		buf.Reset()
 	})
 
-	It(`prints the quiz interactions in a timely manner`, func() {
+	AfterEach(func() {
+		mockCtrl.Finish()
+	})
+
+	It("prints the quiz interactions to buffer in a timely manner", func() {
+		output := func() string { return buf.String() }
+
 		Consistently(output).Should(Equal(""), "before the quiz starts")
 
-		go classroom.HoldMathQuiz(&buf)
+		gomock.InOrder(
+			mockSleeper.EXPECT().Sleep(3*time.Second).Do(func(_ time.Duration) {
+				Expect(buf.String()).To(Equal("Teacher: Guys, are you ready?\n"))
+			}),
+			mockSleeper.EXPECT().Sleep(gomock.Any()).Do(func(_ time.Duration) {
+				Expect(buf.String()).To(ContainSubstring("Teacher: 1 + 1 = ?\n"))
+			}),
+		)
 
-		time.Sleep(3 * time.Second)
+		classroom.HoldMathQuiz(&buf, mockSleeper)
 
-		Eventually(output).Should(ContainSubstring("Teacher: Guys, are you ready?\n"), "after 3 seconds")
-
-		time.Sleep(3 * time.Second)
-
-		Eventually(output).Should(ContainSubstring("Teacher: 1 + 1 = ?\n"), "after 6 seconds")
-
-		time.Sleep(2 * time.Second)
-
-		Eventually(output).Should(ContainSubstring("Student C: 1 + 1 = 2!\nTeacher: C, you are right!\n"), "after 8 seconds")
-
-		time.Sleep(1 * time.Second)
-
-		Eventually(output).Should(ContainSubstring("Student A: C, you win.\n"), "after 9 seconds")
-		Eventually(output).Should(ContainSubstring("Student B: C, you win.\n"), "after 9 seconds")
-		Eventually(output).Should(ContainSubstring("Student D: C, you win.\n"), "after 9 seconds")
-		Eventually(output).Should(ContainSubstring("Student E: C, you win.\n"), "after 9 seconds")
+		Eventually(output).Should(ContainSubstring(
+			"Student C: 1 + 1 = 2!\nTeacher: C, you are right!\n"), "teacher reponding after student's correct answer",
+		)
+		Eventually(output).Should(ContainSubstring(
+			"Student A: C, you win.\n"), "student responding to correct answer",
+		)
+		Eventually(output).Should(ContainSubstring(
+			"Student B: C, you win.\n"), "student responding to correct answer",
+		)
+		Eventually(output).Should(ContainSubstring(
+			"Student D: C, you win.\n"), "student responding to correct answer",
+		)
+		Eventually(output).Should(ContainSubstring(
+			"Student E: C, you win.\n"), "student responding to correct answer",
+		)
 	})
 })

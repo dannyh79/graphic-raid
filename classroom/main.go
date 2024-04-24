@@ -8,5 +8,6 @@ import (
 
 func main() {
 	w := os.Stdout
-	classroom.HoldMathQuiz(w)
+	s := classroom.Sleeper{}
+	classroom.HoldMathQuiz(w, s)
 }

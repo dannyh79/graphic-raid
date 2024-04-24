@@ -7,6 +7,8 @@ require (
 	github.com/onsi/gomega v1.33.0
 )
 
+require go.uber.org/mock v0.4.0
+
 require (
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect

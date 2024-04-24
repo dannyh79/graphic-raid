@@ -7,14 +7,24 @@ import (
 	"time"
 )
 
-func HoldMathQuiz(w io.Writer) {
+type TimeSleeper interface {
+	Sleep(d time.Duration)
+}
+
+type Sleeper struct{}
+
+func (s Sleeper) Sleep(d time.Duration) {
+	time.Sleep(d)
+}
+
+func HoldMathQuiz(w io.Writer, s TimeSleeper) {
 	fmt.Fprintf(w, "Teacher: Guys, are you ready?\n")
 
-	time.Sleep(3 * time.Second)
+	s.Sleep(3 * time.Second)
 
 	fmt.Fprintf(w, "Teacher: 1 + 1 = ?\n")
 
-	time.Sleep(time.Duration(rand.Intn(3-1)+1) * time.Second)
+	s.Sleep(time.Duration(rand.Intn(3-1)+1) * time.Second)
 
 	fmt.Fprintf(w, "Student C: 1 + 1 = 2!\n")
 	fmt.Fprintf(w, "Teacher: C, you are right!\n")
