@@ -1,6 +1,7 @@
 package classroom
 
 import (
+	"fmt"
 	"io"
 	"math/rand"
 	"time"
@@ -19,24 +20,25 @@ func (s Sleeper) Sleep(d time.Duration) {
 }
 
 func HoldMathQuiz(w io.Writer, s TimeSleeper) {
-	t := d.NewTeacher(w)
+	t := d.NewTeacher()
 	ss := map[string]*d.Student{}
 	for _, n := range []string{"A", "B", "C", "D", "E"} {
-		ss[n] = d.NewStudent(w, n)
+		ss[n] = d.NewStudent(n)
 	}
 
-	t.Say(d.Message{Type: d.Greet})
+	fmt.Fprintln(w, t.Say(d.Message{Type: d.Greet}))
 
 	s.Sleep(3 * time.Second)
 
-	t.Say(d.Message{Type: d.Ask})
+	fmt.Fprintln(w, t.Say(d.Message{Type: d.Ask}))
 
 	s.Sleep(time.Duration(rand.Intn(3-1)+1) * time.Second)
 
-	ss["C"].Say(d.Message{Type: d.Answer})
-	t.Say(d.Message{Type: d.Respond, To: "C"})
-	ss["A"].Say(d.Message{Type: d.Respond, To: "C"})
-	ss["B"].Say(d.Message{Type: d.Respond, To: "C"})
-	ss["D"].Say(d.Message{Type: d.Respond, To: "C"})
-	ss["E"].Say(d.Message{Type: d.Respond, To: "C"})
+	fmt.Fprintln(w, ss["C"].Say(d.Message{Type: d.Answer}))
+
+	fmt.Fprintln(w, t.Say(d.Message{Type: d.Respond, To: "C"}))
+	fmt.Fprintln(w, ss["A"].Say(d.Message{Type: d.Respond, To: "C"}))
+	fmt.Fprintln(w, ss["B"].Say(d.Message{Type: d.Respond, To: "C"}))
+	fmt.Fprintln(w, ss["D"].Say(d.Message{Type: d.Respond, To: "C"}))
+	fmt.Fprintln(w, ss["E"].Say(d.Message{Type: d.Respond, To: "C"}))
 }

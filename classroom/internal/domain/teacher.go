@@ -2,12 +2,9 @@ package domain
 
 import (
 	"fmt"
-	"io"
 )
 
-type Teacher struct {
-	Writer io.Writer
-}
+type Teacher struct{}
 
 const (
 	Greet   Sentence = "greet"
@@ -15,18 +12,20 @@ const (
 	Respond Sentence = "respond"
 )
 
-func (t *Teacher) getName() string { return "Teacher" }
-func (t *Teacher) say(s string)    { fmt.Fprintf(t.Writer, "%s: %s\n", t.getName(), s) }
+func (t *Teacher) getName() string     { return "Teacher" }
+func (t *Teacher) say(s string) string { return fmt.Sprintf("%s: %s", t.getName(), s) }
 
-func (t *Teacher) Say(m Message) {
+func (t *Teacher) Say(m Message) string {
+	var s string
 	switch m.Type {
 	case Greet:
-		t.say("Guys, are you ready?")
+		s = "Guys, are you ready?"
 	case Ask:
-		t.say("1 + 1 = ?")
+		s = "1 + 1 = ?"
 	case Respond:
-		t.say(fmt.Sprintf("%s, you are right!", m.To))
+		s = fmt.Sprintf("%s, you are right!", m.To)
 	}
+	return t.say(s)
 }
 
-func NewTeacher(w io.Writer) *Teacher { return &Teacher{w} }
+func NewTeacher() *Teacher { return &Teacher{} }

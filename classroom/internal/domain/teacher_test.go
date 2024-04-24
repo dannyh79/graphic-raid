@@ -1,7 +1,6 @@
 package domain_test
 
 import (
-	"bytes"
 	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -11,29 +10,24 @@ import (
 )
 
 var _ = Describe("Teacher", func() {
-	var buf bytes.Buffer
-	t := d.Teacher{&buf}
-
-	BeforeEach(func() {
-		buf.Reset()
-	})
+	t := d.Teacher{}
 
 	It("greets students", func() {
-		t.Say(d.Message{Type: d.Greet})
+		r := t.Say(d.Message{Type: d.Greet})
 
-		Expect(buf.String()).To(Equal("Teacher: Guys, are you ready?\n"))
+		Expect(r).To(Equal("Teacher: Guys, are you ready?"))
 	})
 
 	It("gives a quiz", func() {
-		t.Say(d.Message{Type: d.Ask})
+		r := t.Say(d.Message{Type: d.Ask})
 
-		Expect(buf.String()).To(MatchRegexp(`Teacher: \d+ [\+|-|\*|/] \d+ = \?\n`))
+		Expect(r).To(MatchRegexp(`Teacher: \d+ [\+|-|\*|/] \d+ = \?`))
 	})
 
 	It("responds to answer", func() {
 		to := "C"
-		t.Say(d.Message{Type: d.Respond, To: to})
+		r := t.Say(d.Message{Type: d.Respond, To: to})
 
-		Expect(buf.String()).To(Equal(fmt.Sprintf("Teacher: %s, you are right!\n", to)))
+		Expect(r).To(Equal(fmt.Sprintf("Teacher: %s, you are right!", to)))
 	})
 })
