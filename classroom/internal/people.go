@@ -4,22 +4,22 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
-	"sync"
 
 	"time"
 
 	d "github.com/dannyh79/graphic-raid/classroom/internal/domain"
 )
 
-type TeacherParams struct {
+type Params struct {
 	w  io.Writer
 	s  TimeSleeper
-	qc chan string
-	ac chan string
+	n  string
+	q  chan string
+	a  chan string
 	dc chan string
 }
 
-func newTeacher(tp TeacherParams) {
+func newTeacher(tp Params) {
 	e := d.NewTeacher()
 	p := newPrinter(tp.w)
 
@@ -29,9 +29,9 @@ func newTeacher(tp TeacherParams) {
 
 	q := e.Say(d.Message{Type: d.Ask})
 	p(q)
-	tp.qc <- q
+	tp.q <- q
 
-	s := <-tp.ac
+	s := <-tp.a
 	n := d.GetStudentName(s)
 
 	for range cap(tp.dc) {
@@ -42,29 +42,17 @@ func newTeacher(tp TeacherParams) {
 	p(m)
 }
 
-type StudentParams struct {
-	w  io.Writer
-	n  string
-	s  TimeSleeper
-	qc chan string
-	ac chan string
-	dc chan string
-	wg *sync.WaitGroup
-}
-
-func newStudent(sp StudentParams) {
-	defer sp.wg.Done()
-
+func newStudent(sp Params) {
 	e := d.NewStudent(sp.n)
 	p := newPrinter(sp.w)
 
 	select {
-	case q := <-sp.qc:
+	case q := <-sp.q:
 		sp.s.Sleep(time.Duration(rand.Intn(3-1)+1) * time.Second)
 
 		a := e.Say(d.Message{Type: d.Answer, Body: q})
 		p(a)
-		sp.ac <- a
+		sp.a <- a
 	case n := <-sp.dc:
 		m := e.Say(d.Message{Type: d.Respond, To: n})
 		p(m)

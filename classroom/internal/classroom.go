@@ -24,11 +24,15 @@ func HoldMathQuiz(w io.Writer, s TimeSleeper) {
 	qc := make(chan string)
 	dc := make(chan string, len(Students)-1)
 
-	go newTeacher(TeacherParams{w: w, s: s, ac: ac, qc: qc, dc: dc})
+	go newTeacher(Params{w: w, s: s, a: ac, q: qc, dc: dc})
 
 	for _, n := range Students {
 		wg.Add(1)
-		go newStudent(StudentParams{w, n, s, qc, ac, dc, &wg})
+		go func() {
+			defer wg.Done()
+
+			newStudent(Params{w: w, s: s, n: n, a: ac, q: qc, dc: dc})
+		}()
 	}
 
 	wg.Wait()
