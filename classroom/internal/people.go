@@ -11,31 +11,31 @@ import (
 )
 
 type Params struct {
-	w  io.Writer
-	s  TimeSleeper
-	n  string
-	q  chan string
-	a  chan string
-	dc chan string
+	writer     io.Writer
+	sleeper    TimeSleeper
+	name       string
+	quiz       chan string
+	answer     chan string
+	answeredBy chan string
 }
 
 func newTeacher(tp Params) {
 	e := d.NewTeacher()
-	p := newPrinter(tp.w)
+	p := newPrinter(tp.writer)
 
 	p(e.Say(d.Message{Type: d.Greet}))
 
-	tp.s.Sleep(3 * time.Second)
+	tp.sleeper.Sleep(3 * time.Second)
 
 	q := e.Say(d.Message{Type: d.Ask})
 	p(q)
-	tp.q <- q
+	tp.quiz <- q
 
-	s := <-tp.a
+	s := <-tp.answer
 	n := d.GetStudentName(s)
 
-	for range cap(tp.dc) {
-		tp.dc <- n
+	for range cap(tp.answeredBy) {
+		tp.answeredBy <- n
 	}
 
 	m := e.Say(d.Message{Type: d.Respond, To: n})
@@ -43,17 +43,17 @@ func newTeacher(tp Params) {
 }
 
 func newStudent(sp Params) {
-	e := d.NewStudent(sp.n)
-	p := newPrinter(sp.w)
+	e := d.NewStudent(sp.name)
+	p := newPrinter(sp.writer)
 
 	select {
-	case q := <-sp.q:
-		sp.s.Sleep(time.Duration(rand.Intn(3-1)+1) * time.Second)
+	case q := <-sp.quiz:
+		sp.sleeper.Sleep(time.Duration(rand.Intn(3-1)+1) * time.Second)
 
 		a := e.Say(d.Message{Type: d.Answer, Body: q})
 		p(a)
-		sp.a <- a
-	case n := <-sp.dc:
+		sp.answer <- a
+	case n := <-sp.answeredBy:
 		m := e.Say(d.Message{Type: d.Respond, To: n})
 		p(m)
 	}
