@@ -21,7 +21,7 @@ var _ = Describe("Teacher", func() {
 	It("gives a quiz", func() {
 		r := t.Say(d.Message{Type: d.Ask})
 
-		Expect(r).To(MatchRegexp(`Teacher: \d+ [\+|-|\*|/] \d+ = \?`))
+		Expect(r).To(MatchRegexp(`Teacher: \d+ \+|-|\*|/ \d+ = \?`))
 	})
 
 	It("responds to answer", func() {

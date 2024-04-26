@@ -42,7 +42,7 @@ var _ = Describe("HoldMathQuiz", func() {
 		}).Times(1)
 
 		mockSleeper.EXPECT().Sleep(gomock.Any()).Do(func(_ time.Duration) {
-			Eventually(output).Should(MatchRegexp(`Teacher: \d{1,3} [\+|-|\*|/] \d{1,3} = \?\n`))
+			Eventually(output).Should(MatchRegexp(`Teacher: \d{1,3} \+|-|\*|/ \d{1,3} = \?\n`))
 		}).Times(1)
 
 		var s string
@@ -57,7 +57,7 @@ var _ = Describe("HoldMathQuiz", func() {
 		}).Should(BeTrue(), "someone answered to the quiz")
 
 		Expect(output()).To(MatchRegexp(
-			`Student %s: \d{1,3} [\+|-|\*|/] \d{1,3} = -?\d+\.?\d*!\nTeacher: %s, you are right!\n`, s, s,
+			`Student %s: \d{1,3} \+|-|\*|/ \d{1,3} = -?\d+\.?\d*!\nTeacher: %s, you are right!\n`, s, s,
 		))
 
 		for _, n := range classroom.Students {

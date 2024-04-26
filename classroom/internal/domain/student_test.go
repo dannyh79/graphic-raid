@@ -13,7 +13,7 @@ var _ = Describe("Student", func() {
 	It(`answers to the quiz "1 / 2 = ?"`, func() {
 		r := s.Say(d.Message{Type: d.Answer, Body: "1 / 2 = ?"})
 
-		Expect(r).To(MatchRegexp(`Student Someone: \d+ [\+|-|\*|/] \d+ = -?\d+\.?\d*!`))
+		Expect(r).To(MatchRegexp(`Student Someone: \d+ \+|-|\*|/ \d+ = -?\d+\.?\d*!`))
 	})
 
 	It(`panics to the quiz "a + 1 = ?"`, func() {
