@@ -19,7 +19,7 @@ type TeacherParams struct {
 	dc chan string
 }
 
-func NewTeacher(tp TeacherParams) {
+func newTeacher(tp TeacherParams) {
 	e := d.NewTeacher()
 	p := newPrinter(tp.w)
 
@@ -52,7 +52,7 @@ type StudentParams struct {
 	wg *sync.WaitGroup
 }
 
-func NewStudent(sp StudentParams) {
+func newStudent(sp StudentParams) {
 	defer sp.wg.Done()
 
 	e := d.NewStudent(sp.n)
