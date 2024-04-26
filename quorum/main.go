@@ -23,5 +23,6 @@ func main() {
 	}
 
 	w := os.Stdout
-	board.HoldQuorumElection(w, n)
+	r := os.Stdin
+	board.HoldQuorumElection(r, w, n)
 }
