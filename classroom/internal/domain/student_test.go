@@ -23,3 +23,19 @@ var _ = Describe("Student", func() {
 		Expect(r).To(Equal("Student Someone: Another, you win."))
 	})
 })
+
+var _ = Describe("GetStudentName", func() {
+	It(`returns "Someone"`, func() {
+		s := "Student Someone: Yes!"
+		r := d.GetStudentName(s)
+
+		Expect(r).To(Equal("Someone"))
+	})
+
+	It(`returns ""`, func() {
+		s := "Student : Yes!"
+		r := d.GetStudentName(s)
+
+		Expect(r).To(Equal(""))
+	})
+})

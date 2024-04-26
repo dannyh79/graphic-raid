@@ -2,6 +2,8 @@ package classroom_test
 
 import (
 	"bytes"
+	"fmt"
+	"regexp"
 	"time"
 
 	classroom "github.com/dannyh79/graphic-raid/classroom/internal"
@@ -34,31 +36,44 @@ var _ = Describe("HoldMathQuiz", func() {
 
 		Consistently(output).Should(Equal(""), "before the quiz starts")
 
-		gomock.InOrder(
-			mockSleeper.EXPECT().Sleep(3*time.Second).Do(func(_ time.Duration) {
-				Expect(buf.String()).To(Equal("Teacher: Guys, are you ready?\n"))
-			}),
-			mockSleeper.EXPECT().Sleep(gomock.Any()).Do(func(_ time.Duration) {
-				Expect(buf.String()).To(ContainSubstring("Teacher: 1 + 1 = ?\n"))
-			}),
-		)
+		go classroom.HoldMathQuiz(&buf, mockSleeper)
 
-		classroom.HoldMathQuiz(&buf, mockSleeper)
+		mockSleeper.EXPECT().Sleep(3 * time.Second).Do(func(_ time.Duration) {
+			Eventually(output).Should(ContainSubstring("Teacher: Guys, are you ready?\n"))
+		}).Times(1)
 
-		Eventually(output).Should(ContainSubstring(
-			"Student C: 1 + 1 = 2!\nTeacher: C, you are right!\n"), "teacher reponding after student's correct answer",
-		)
-		Eventually(output).Should(ContainSubstring(
-			"Student A: C, you win.\n"), "student responding to correct answer",
-		)
-		Eventually(output).Should(ContainSubstring(
-			"Student B: C, you win.\n"), "student responding to correct answer",
-		)
-		Eventually(output).Should(ContainSubstring(
-			"Student D: C, you win.\n"), "student responding to correct answer",
-		)
-		Eventually(output).Should(ContainSubstring(
-			"Student E: C, you win.\n"), "student responding to correct answer",
-		)
+		mockSleeper.EXPECT().Sleep(gomock.Any()).Do(func(_ time.Duration) {
+			Eventually(output).Should(ContainSubstring("Teacher: 1 + 1 = ?\n"))
+		}).Times(1)
+
+		var s string
+		Eventually(func() bool {
+			output := output()
+			name := getStudentName(output)
+			if name != "" {
+				s = name
+				return true
+			}
+			return false
+		}).Should(BeTrue(), "someone answered to the quiz")
+
+		Expect(output()).To(ContainSubstring(
+			fmt.Sprintf("Student %s: 1 + 1 = 2!\nTeacher: %s, you are right!\n", s, s),
+		))
+
+		for _, n := range classroom.Students {
+			if n != s {
+				Expect(output()).To(MatchRegexp(fmt.Sprintf(`Student %s: %s, you win.\n`, n, s)))
+			}
+		}
 	})
 })
+
+func getStudentName(s string) string {
+	re := regexp.MustCompile(`Student (\w+):.+!`)
+	m := re.FindStringSubmatch(s)
+	if len(m) < 1 {
+		return ""
+	}
+	return m[1]
+}

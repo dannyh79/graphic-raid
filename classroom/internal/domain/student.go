@@ -2,6 +2,7 @@ package domain
 
 import (
 	"fmt"
+	"regexp"
 )
 
 type Student struct {
@@ -27,3 +28,13 @@ func (s *Student) Say(m Message) string {
 }
 
 func NewStudent(n string) *Student { return &Student{n} }
+
+func GetStudentName(s string) string {
+	re := regexp.MustCompile(`Student (\w+):`)
+	m := re.FindStringSubmatch(s)
+
+	if len(m) > 1 {
+		return m[1]
+	}
+	return ""
+}
