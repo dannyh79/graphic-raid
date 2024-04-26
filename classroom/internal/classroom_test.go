@@ -2,7 +2,6 @@ package classroom_test
 
 import (
 	"bytes"
-	"fmt"
 	"regexp"
 	"time"
 
@@ -57,8 +56,8 @@ var _ = Describe("HoldMathQuiz", func() {
 			return false
 		}).Should(BeTrue(), "someone answered to the quiz")
 
-		Expect(output()).To(ContainSubstring(
-			fmt.Sprintf("Student %s: 1 + 1 = 2!\nTeacher: %s, you are right!\n", s, s),
+		Expect(output()).To(MatchRegexp(
+			`Student %s: \d{1,3} [\+|-|\*|/] \d{1,3} = -?\d+\.?\d*!\nTeacher: %s, you are right!\n`, s, s,
 		))
 
 		for _, n := range classroom.Students {

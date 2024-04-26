@@ -59,9 +59,10 @@ func NewStudent(sp StudentParams) {
 	p := newPrinter(sp.w)
 
 	select {
-	case <-sp.qc:
+	case q := <-sp.qc:
 		sp.s.Sleep(time.Duration(rand.Intn(3-1)+1) * time.Second)
-		a := e.Say(d.Message{Type: d.Answer})
+
+		a := e.Say(d.Message{Type: d.Answer, Body: q})
 		p(a)
 		sp.ac <- a
 	case n := <-sp.dc:

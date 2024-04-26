@@ -5,4 +5,5 @@ type Sentence string
 type Message struct {
 	Type Sentence
 	To   string
+	Body string
 }

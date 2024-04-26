@@ -10,10 +10,17 @@ import (
 var _ = Describe("Student", func() {
 	s := d.Student{"Someone"}
 
-	It("answers the quiz", func() {
-		r := s.Say(d.Message{Type: d.Answer})
+	It(`answers to the quiz "1 / 2 = ?"`, func() {
+		r := s.Say(d.Message{Type: d.Answer, Body: "1 / 2 = ?"})
 
-		Expect(r).To(MatchRegexp(`Student Someone: \d+ [\+|-|\*|/] \d+ = \d+\!`))
+		Expect(r).To(MatchRegexp(`Student Someone: \d+ [\+|-|\*|/] \d+ = -?\d+\.?\d*!`))
+	})
+
+	It(`panics to the quiz "a + 1 = ?"`, func() {
+
+		Expect(func() {
+			s.Say(d.Message{Type: d.Answer, Body: "a + 1 = ?"})
+		}).To(PanicWith("undefined spec: incorrect quiz format"))
 	})
 
 	It("responds to answer", func() {
