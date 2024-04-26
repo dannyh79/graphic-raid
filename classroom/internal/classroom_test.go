@@ -63,7 +63,7 @@ var _ = Describe("HoldMathQuiz", func() {
 
 		for _, n := range classroom.Students {
 			if n != s {
-				Expect(output()).To(MatchRegexp(fmt.Sprintf(`Student %s: %s, you win.\n`, n, s)))
+				Expect(output()).To(MatchRegexp(`Student %s: %s, you win\.\n`, n, s))
 			}
 		}
 	})
