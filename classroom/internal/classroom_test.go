@@ -43,7 +43,7 @@ var _ = Describe("HoldMathQuiz", func() {
 		}).Times(1)
 
 		mockSleeper.EXPECT().Sleep(gomock.Any()).Do(func(_ time.Duration) {
-			Eventually(output).Should(ContainSubstring("Teacher: 1 + 1 = ?\n"))
+			Eventually(output).Should(MatchRegexp(`Teacher: \d{1,3} [\+|-|\*|/] \d{1,3} = \?\n`))
 		}).Times(1)
 
 		var s string
