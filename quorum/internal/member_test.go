@@ -1,32 +1,31 @@
 package board_test
 
 import (
-	"bytes"
 	"strconv"
 
 	board "github.com/dannyh79/graphic-raid/quorum/internal"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 )
 
 var _ = Describe("NewMember", func() {
 	var (
-		buf          bytes.Buffer
-		o            func() string = func() string { return buf.String() }
+		buf          *gbytes.Buffer
 		p            board.MemberParams
 		ack          chan string
 		readyToElect chan bool
 	)
 
 	BeforeEach(func() {
-		buf.Reset()
+		buf = gbytes.NewBuffer()
 
 		ack = make(chan string)
 		readyToElect = make(chan bool)
 		p = board.MemberParams{
 			Id:           "0",
-			Writer:       &buf,
+			Writer:       buf,
 			WantToLead:   func() bool { return true },
 			Ack:          ack,
 			ReadyToElect: readyToElect,
@@ -36,7 +35,7 @@ var _ = Describe("NewMember", func() {
 	It(`Writes "Member 0: Hi" to buffer upon starting`, func() {
 		go board.NewMember(p)
 
-		Eventually(o).Should(ContainSubstring("Member 0: Hi\n"))
+		Eventually(buf).Should(gbytes.Say("Member 0: Hi\n"))
 	})
 
 	It(`Writes "Member 0: I want to be leader" to buffer`, func() {
@@ -45,7 +44,7 @@ var _ = Describe("NewMember", func() {
 		<-ack
 		readyToElect <- true
 
-		Eventually(o).Should(ContainSubstring("Member 0: I want to be leader\n"))
+		Eventually(buf).Should(gbytes.Say("Member 0: I want to be leader\n"))
 	})
 
 	It(`does NOT write "Member 0: I want to be leader" to buffer`, func() {
@@ -56,7 +55,7 @@ var _ = Describe("NewMember", func() {
 		<-ack
 		readyToElect <- true
 
-		Eventually(o).Should(Not(ContainSubstring("Member 0: I want to be leader\n")))
+		Eventually(buf).Should(Not(gbytes.Say("Member 0: I want to be leader\n")))
 	})
 
 	It(`Writes to buffer in a sequential manner`, func() {
@@ -65,10 +64,8 @@ var _ = Describe("NewMember", func() {
 		<-ack
 		readyToElect <- true
 
-		Eventually(o).Should(ContainSubstring(
-			"Member 0: Hi\n" +
-				"Member 0: I want to be leader\n",
-		))
+		Eventually(buf).Should(gbytes.Say("Member 0: Hi\n"))
+		Eventually(buf).Should(gbytes.Say("Member 0: I want to be leader\n"))
 	})
 })
 
