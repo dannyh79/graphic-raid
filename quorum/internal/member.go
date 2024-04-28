@@ -118,18 +118,22 @@ type Controller struct {
 	pl         func(string)
 }
 
-func (c *Controller) maybePromoteCandidate(msg Message) {
+func (c *Controller) recordPolls(msg Message) {
 	switch msg.T {
 	case AckCandidate:
 		cId := msg.Body
 		c.candidates[cId]++
-		if reason, ok := c.quorumRule(cId, c.candidates, len(c.members)); ok {
-			c.mailboxes[cId] <- Message{PromoteLeader, c.id, reason}
-			<-c.mailbox
-			c.members[cId] = leader
-			c.candidates = make(map[string]int)
-			c.pl(reason)
-		}
+		c.maybePromoteLeader(cId)
+	}
+}
+
+func (c *Controller) maybePromoteLeader(id string) {
+	if reason, ok := c.quorumRule(id, c.candidates, len(c.members)); ok {
+		c.mailboxes[id] <- Message{PromoteLeader, c.id, reason}
+		<-c.mailbox
+		c.members[id] = leader
+		c.candidates = make(map[string]int)
+		c.pl(reason)
 	}
 }
 
@@ -168,8 +172,7 @@ func NewController(p ControllerParams) {
 				}
 			}
 
-			c.maybePromoteCandidate(msg)
-
+			c.recordPolls(msg)
 		}
 	}
 }
