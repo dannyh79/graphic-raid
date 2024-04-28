@@ -26,6 +26,7 @@ const (
 	AckLeader      MessageType = 5
 	KeepAliveStart MessageType = 6
 	KeepAlive      MessageType = 7
+	Kill           MessageType = 9
 )
 
 type BoardMember struct {
@@ -42,6 +43,7 @@ type BoardMember struct {
 
 type MemberParams struct {
 	Id                string
+	WaitGroup         *sync.WaitGroup
 	Writer            io.Writer
 	WantToLead        func() bool
 	Mailbox           <-chan Message
@@ -51,6 +53,8 @@ type MemberParams struct {
 }
 
 func NewMember(p MemberParams) {
+	defer p.WaitGroup.Done()
+
 	prefix := fmt.Sprintf("Member %s: ", p.Id)
 	pl := func(s string) { fmt.Fprintln(p.Writer, s) }
 
@@ -70,7 +74,11 @@ func NewMember(p MemberParams) {
 
 	for {
 		select {
-		case msg := <-m.Mailbox:
+		case msg, ok := <-m.Mailbox:
+			if !ok {
+				return
+			}
+
 			switch msg.T {
 			case Ack:
 				m.peers[msg.From] = true
@@ -108,6 +116,8 @@ func NewMember(p MemberParams) {
 				m.Allcast <- Message{KeepAlive, m.Id, ""}
 			case KeepAlive:
 				m.Allcast <- Message{KeepAlive, m.Id, ""}
+			case Kill:
+				return
 			}
 		}
 	}

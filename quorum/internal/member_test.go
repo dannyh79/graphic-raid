@@ -1,6 +1,8 @@
 package board_test
 
 import (
+	"sync"
+
 	b "github.com/dannyh79/graphic-raid/quorum/internal"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -10,6 +12,7 @@ import (
 
 var (
 	buf *gbytes.Buffer
+	wg  sync.WaitGroup
 )
 
 var _ = Describe("NewMember", func() {
@@ -30,6 +33,7 @@ var _ = Describe("NewMember", func() {
 		cMbx = make(chan b.Message, 1)
 		p = b.MemberParams{
 			Id:                "0",
+			WaitGroup:         &wg,
 			Writer:            buf,
 			WantToLead:        func() bool { return true },
 			Mailbox:           mailbox,
@@ -100,6 +104,22 @@ var _ = Describe("NewMember", func() {
 		mailbox <- b.Message{b.KeepAlive, "1", ""}
 
 		Eventually(allcast).Should(Receive(Equal(b.Message{b.KeepAlive, p.Id, ""})))
+	})
+
+	It(`Does NOT send KeepAlive after receiving Kill message`, func() {
+		wg.Add(1)
+		go b.NewMember(p)
+
+		mailbox <- b.Message{b.Ack, "1", ""}
+		mailbox <- b.Message{b.KeepAliveStart, "1", ""}
+
+		Eventually(allcast).Should(Receive(Equal(b.Message{b.KeepAlive, p.Id, ""})))
+
+		mailbox <- b.Message{b.Kill, b.ControllerId, ""}
+
+		Consistently(allcast).ShouldNot(Receive(Equal(b.Message{b.KeepAlive, p.Id, ""})))
+
+		wg.Wait()
 	})
 
 	It(`Writes to buffer in a sequential manner`, func() {
@@ -180,6 +200,7 @@ var _ = Describe("Interaction between 3 BoardMembers", func() {
 
 		p1 = b.MemberParams{
 			Id:                ids[0],
+			WaitGroup:         &wg,
 			Writer:            buf,
 			WantToLead:        func() bool { return true },
 			Mailbox:           mailboxes[ids[0]],
@@ -189,6 +210,7 @@ var _ = Describe("Interaction between 3 BoardMembers", func() {
 		}
 		p2 = b.MemberParams{
 			Id:                ids[1],
+			WaitGroup:         &wg,
 			Writer:            buf,
 			WantToLead:        func() bool { return true },
 			Mailbox:           mailboxes[ids[1]],
@@ -198,6 +220,7 @@ var _ = Describe("Interaction between 3 BoardMembers", func() {
 		}
 		p3 = b.MemberParams{
 			Id:                ids[2],
+			WaitGroup:         &wg,
 			Writer:            buf,
 			WantToLead:        func() bool { return false },
 			Mailbox:           mailboxes[ids[2]],
