@@ -230,3 +230,61 @@ var _ = Describe("Interaction between 2 BoardMembers", func() {
 		})
 	})
 })
+
+var _ = Describe("Interaction between 3 BoardMembers", func() {
+	var (
+		p1, p2, p3 board.MemberParams
+		cp         board.ControllerParams
+	)
+
+	BeforeEach(func() {
+		buf = gbytes.NewBuffer()
+		ack = make(chan string)
+		readyToElect = make(chan bool)
+		candidate = make(chan string)
+
+		p1 = board.MemberParams{
+			Id:           "0",
+			Writer:       buf,
+			WantToLead:   func() bool { return true },
+			Ack:          ack,
+			ReadyToElect: readyToElect,
+			Candidate:    candidate,
+		}
+		p2 = board.MemberParams{
+			Id:           "1",
+			Writer:       buf,
+			WantToLead:   func() bool { return true },
+			Ack:          ack,
+			ReadyToElect: readyToElect,
+			Candidate:    candidate,
+		}
+		p3 = board.MemberParams{
+			Id:           "2",
+			Writer:       buf,
+			WantToLead:   func() bool { return false },
+			Ack:          ack,
+			ReadyToElect: readyToElect,
+			Candidate:    candidate,
+		}
+		cp = board.ControllerParams{
+			Members:      3,
+			Ack:          ack,
+			ReadyToElect: readyToElect,
+		}
+	})
+
+	Context("when 2 BoardMembers wanting to be the leader", func() {
+		It(`Writes "Member [012]: Accept member [01] to be leader" to buffer`, func() {
+			go board.NewController(cp)
+
+			for _, p := range []board.MemberParams{p1, p2, p3} {
+				go board.NewMember(p)
+			}
+
+			Eventually(buf, 3).Should(gbytes.Say("Member [012]: Hi\n"))
+			Eventually(buf, 2).Should(gbytes.Say("Member [01]: I want to be leader\n"))
+			Eventually(buf, 2).Should(gbytes.Say("Member [012]: Accept member [01] to be leader\n"))
+		})
+	})
+})
