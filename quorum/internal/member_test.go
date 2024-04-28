@@ -174,6 +174,20 @@ var _ = Describe("NewController", func() {
 		Eventually(mailboxes["1"]).Should(Receive(Equal(b.Message{b.Ack, "0", ""})))
 		Eventually(mailboxes["2"]).Should(Receive(Equal(b.Message{b.Ack, "0", ""})))
 	})
+
+	It(`Sends KeepAliveFail message to sender`, func() {
+		go b.NewController(p)
+
+		mailboxes["0"] <- b.Message{b.Kill, b.ControllerId, ""}
+		for range n + 1 {
+			allcast <- b.Message{b.KeepAlive, "1", ""}
+		}
+
+		getMessageType := func(m b.Message) b.MessageType {
+			return m.T
+		}
+		Eventually(mailboxes["1"]).Should(Receive(WithTransform(getMessageType, Equal(b.KeepAliveFail))))
+	})
 })
 
 var _ = Describe("Interaction between 3 BoardMembers", func() {

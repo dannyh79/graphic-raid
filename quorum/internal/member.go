@@ -26,6 +26,7 @@ const (
 	AckLeader      MessageType = 5
 	KeepAliveStart MessageType = 6
 	KeepAlive      MessageType = 7
+	KeepAliveFail  MessageType = 8
 	Kill           MessageType = 9
 )
 
@@ -222,6 +223,9 @@ func NewController(p ControllerParams) {
 			for id, mbx := range c.mailboxes {
 				if id != msg.From {
 					mbx <- msg
+					if len(mbx) >= cap(mbx) {
+						c.mailboxes[msg.From] <- Message{KeepAliveFail, c.id, id}
+					}
 				}
 			}
 
