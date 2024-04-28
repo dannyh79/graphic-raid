@@ -89,15 +89,15 @@ var _ = Describe("NewMember", func() {
 
 var _ = Describe("NewController", func() {
 	var (
-		n         int
 		allcast   chan board.Message
 		mailboxes map[string]chan board.Message
 		p         board.ControllerParams
 	)
 
-	BeforeEach(func() {
-		n = 3
+	ids := []string{"0", "1", "2"}
+	n := len(ids)
 
+	BeforeEach(func() {
 		allcast = make(chan board.Message, n)
 		mailboxes = make(map[string]chan board.Message)
 
@@ -106,9 +106,11 @@ var _ = Describe("NewController", func() {
 		}
 
 		p = board.ControllerParams{
-			Members:   n,
-			Mailboxes: mailboxes,
-			Allcast:   allcast,
+			Writer:     buf,
+			Members:    ids,
+			QuorumRule: board.PromoteFirstReachedHalfVotes,
+			Mailboxes:  mailboxes,
+			Allcast:    allcast,
 		}
 	})
 
@@ -126,52 +128,61 @@ var _ = Describe("NewController", func() {
 
 var _ = Describe("Interaction between 3 BoardMembers", func() {
 	var (
-		n          int
 		allcast    chan board.Message
 		mailboxes  map[string]chan board.Message
 		p1, p2, p3 board.MemberParams
 		cp         board.ControllerParams
+		cMbx       chan board.Message
 	)
 
-	n = 3
+	ids := []string{"0", "1", "2"}
+	n := len(ids)
 
 	BeforeEach(func() {
 		buf = gbytes.NewBuffer()
 
 		allcast = make(chan board.Message, n)
 		mailboxes = make(map[string]chan board.Message)
-		for _, id := range []string{"0", "1", "2"} {
+		for _, id := range ids {
 			mailboxes[id] = make(chan board.Message, 1)
 		}
+		cMbx = make(chan board.Message, 1)
 
 		p1 = board.MemberParams{
-			Id:         "0",
-			Writer:     buf,
-			WantToLead: func() bool { return true },
-			Mailbox:    mailboxes["0"],
-			Allcast:    allcast,
-			BoardSize:  n,
+			Id:                ids[0],
+			Writer:            buf,
+			WantToLead:        func() bool { return true },
+			Mailbox:           mailboxes[ids[0]],
+			Allcast:           allcast,
+			ControllerMailbox: cMbx,
+			BoardSize:         n,
 		}
 		p2 = board.MemberParams{
-			Id:         "1",
-			Writer:     buf,
-			WantToLead: func() bool { return true },
-			Mailbox:    mailboxes["1"],
-			Allcast:    allcast,
-			BoardSize:  n,
+			Id:                ids[1],
+			Writer:            buf,
+			WantToLead:        func() bool { return true },
+			Mailbox:           mailboxes[ids[1]],
+			Allcast:           allcast,
+			ControllerMailbox: cMbx,
+			BoardSize:         n,
 		}
 		p3 = board.MemberParams{
-			Id:         "2",
-			Writer:     buf,
-			WantToLead: func() bool { return false },
-			Mailbox:    mailboxes["2"],
-			Allcast:    allcast,
-			BoardSize:  n,
+			Id:                ids[2],
+			Writer:            buf,
+			WantToLead:        func() bool { return false },
+			Mailbox:           mailboxes[ids[2]],
+			Allcast:           allcast,
+			ControllerMailbox: cMbx,
+			BoardSize:         n,
 		}
+
 		cp = board.ControllerParams{
-			Members:   n,
-			Mailboxes: mailboxes,
-			Allcast:   allcast,
+			Writer:     buf,
+			Members:    ids,
+			QuorumRule: board.PromoteFirstReachedHalfVotes,
+			Mailboxes:  mailboxes,
+			Allcast:    allcast,
+			Mailbox:    cMbx,
 		}
 	})
 
@@ -185,5 +196,6 @@ var _ = Describe("Interaction between 3 BoardMembers", func() {
 		Eventually(buf).Should(gbytes.Say("Member [012]: Hi\n"))
 		Eventually(buf).Should(gbytes.Say("Member [01]: I want to be leader\n"))
 		Eventually(buf).Should(gbytes.Say("Member [012]: Accept member [01] to be leader\n"))
+		Eventually(buf).Should(gbytes.Say("Member [01] voted to be leader\n"))
 	})
 })

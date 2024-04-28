@@ -16,29 +16,33 @@ type Message struct {
 }
 
 const (
-	Ack          MessageType = 0
-	ReadyToElect MessageType = 1
-	WantToLead   MessageType = 2
-	AckCandidate MessageType = 3
+	Ack           MessageType = 0
+	ReadyToElect  MessageType = 1
+	WantToLead    MessageType = 2
+	AckCandidate  MessageType = 3
+	PromoteLeader MessageType = 4
 )
 
 type BoardMember struct {
-	Id         string
-	Writer     io.Writer
-	WantToLead func() bool
-	Mailbox    <-chan Message
-	Allcast    chan Message
-	boardSize  int
-	peers      map[string]bool
+	Id                string
+	Writer            io.Writer
+	WantToLead        func() bool
+	Mailbox           <-chan Message
+	Allcast           chan Message
+	ControllerMailbox chan Message
+	boardSize         int
+	peers             map[string]bool
+	isLeader          bool
 }
 
 type MemberParams struct {
-	Id         string
-	Writer     io.Writer
-	WantToLead func() bool
-	Mailbox    <-chan Message
-	Allcast    chan Message
-	BoardSize  int
+	Id                string
+	Writer            io.Writer
+	WantToLead        func() bool
+	Mailbox           <-chan Message
+	Allcast           chan Message
+	ControllerMailbox chan Message
+	BoardSize         int
 }
 
 func NewMember(p MemberParams) {
@@ -46,12 +50,14 @@ func NewMember(p MemberParams) {
 	pl := func(s string) { fmt.Fprintln(p.Writer, s) }
 
 	m := BoardMember{
-		Id:         p.Id,
-		WantToLead: p.WantToLead,
-		Mailbox:    p.Mailbox,
-		Allcast:    p.Allcast,
-		boardSize:  p.BoardSize,
-		peers:      make(map[string]bool),
+		Id:                p.Id,
+		WantToLead:        p.WantToLead,
+		Mailbox:           p.Mailbox,
+		Allcast:           p.Allcast,
+		ControllerMailbox: p.ControllerMailbox,
+		boardSize:         p.BoardSize,
+		peers:             make(map[string]bool),
+		isLeader:          false,
 	}
 
 	pl(prefix + "Hi")
@@ -81,7 +87,10 @@ func NewMember(p MemberParams) {
 			switch msg.T {
 			case WantToLead:
 				pl(prefix + fmt.Sprintf("Accept member %s to be leader", msg.From))
-				m.Allcast <- Message{AckCandidate, m.Id, ""}
+				m.Allcast <- Message{AckCandidate, m.Id, msg.From}
+			case PromoteLeader:
+				m.ControllerMailbox <- Message{Ack, m.Id, ""}
+				m.isLeader = true
 			}
 		}
 	}
@@ -89,23 +98,65 @@ func NewMember(p MemberParams) {
 
 func FiftyFifty() bool { return rand.Intn(2) == 0 }
 
+const ControllerId = "controller"
+
+type role int
+
+const (
+	follower role = 0
+	leader   role = 1
+)
+
 type Controller struct {
-	members   int
-	mailboxes map[string]chan Message
-	allcast   chan Message
+	id         string
+	members    map[string]role
+	quorumRule func(id string, polls map[string]int, members int) (string, bool)
+	mailbox    chan Message
+	mailboxes  map[string]chan Message
+	allcast    chan Message
+	candidates map[string]int
+	pl         func(string)
+}
+
+func (c *Controller) maybePromoteCandidate(msg Message) {
+	switch msg.T {
+	case AckCandidate:
+		cId := msg.Body
+		c.candidates[cId]++
+		if reason, ok := c.quorumRule(cId, c.candidates, len(c.members)); ok {
+			c.mailboxes[cId] <- Message{PromoteLeader, c.id, reason}
+			<-c.mailbox
+			c.members[cId] = leader
+			c.candidates = make(map[string]int)
+			c.pl(reason)
+		}
+	}
 }
 
 type ControllerParams struct {
-	Members   int
-	Mailboxes map[string]chan Message
-	Allcast   chan Message
+	Writer     io.Writer
+	Members    []string
+	QuorumRule func(id string, polls map[string]int, members int) (string, bool)
+	Mailbox    chan Message
+	Mailboxes  map[string]chan Message
+	Allcast    chan Message
 }
 
 func NewController(p ControllerParams) {
+	members := make(map[string]role)
+	for _, id := range p.Members {
+		members[id] = follower
+	}
+
 	c := Controller{
-		members:   p.Members,
-		mailboxes: p.Mailboxes,
-		allcast:   p.Allcast,
+		id:         ControllerId,
+		members:    members,
+		quorumRule: p.QuorumRule,
+		mailbox:    p.Mailbox,
+		mailboxes:  p.Mailboxes,
+		allcast:    p.Allcast,
+		candidates: make(map[string]int),
+		pl:         func(s string) { fmt.Fprintln(p.Writer, s) },
 	}
 
 	for {
@@ -116,6 +167,16 @@ func NewController(p ControllerParams) {
 					mbx <- msg
 				}
 			}
+
+			c.maybePromoteCandidate(msg)
+
 		}
 	}
+}
+
+func PromoteFirstReachedHalfVotes(id string, polls map[string]int, members int) (reason string, ok bool) {
+	if polls[id] >= members/2 {
+		return fmt.Sprintf("Member %s voted to be leader", id), true
+	}
+	return fmt.Sprintf("Quorum failed: (1 < %v/2)", members), false
 }
