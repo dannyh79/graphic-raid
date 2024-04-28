@@ -18,6 +18,7 @@ var _ = Describe("NewMember", func() {
 		p       b.MemberParams
 		mailbox chan b.Message
 		allcast chan b.Message
+		cMbx    chan b.Message
 	)
 
 	BeforeEach(func() {
@@ -26,13 +27,15 @@ var _ = Describe("NewMember", func() {
 		n = 2
 		mailbox = make(chan b.Message, 2)
 		allcast = make(chan b.Message, 2)
+		cMbx = make(chan b.Message, 1)
 		p = b.MemberParams{
-			Id:         "0",
-			Writer:     buf,
-			WantToLead: func() bool { return true },
-			Mailbox:    mailbox,
-			Allcast:    allcast,
-			BoardSize:  n,
+			Id:                "0",
+			Writer:            buf,
+			WantToLead:        func() bool { return true },
+			Mailbox:           mailbox,
+			ControllerMailbox: cMbx,
+			Allcast:           allcast,
+			BoardSize:         n,
 		}
 	})
 
@@ -71,13 +74,39 @@ var _ = Describe("NewMember", func() {
 		Eventually(buf).Should(gbytes.Say("Member 0: Accept member 1 to be leader\n"))
 	})
 
+	It(`Sends KeepAliveStart message to others upon promoted`, func() {
+		go b.NewMember(p)
+
+		mailbox <- b.Message{b.Ack, "1", ""}
+		mailbox <- b.Message{b.PromoteLeader, "1", ""}
+
+		Eventually(allcast).Should(Receive(Equal(b.Message{b.KeepAliveStart, p.Id, ""})))
+	})
+
+	It(`Sends KeepAlive message to others upon receiving KeepAliveStart`, func() {
+		go b.NewMember(p)
+
+		mailbox <- b.Message{b.Ack, "1", ""}
+		mailbox <- b.Message{b.KeepAliveStart, "1", ""}
+
+		Eventually(allcast).Should(Receive(Equal(b.Message{b.KeepAlive, p.Id, ""})))
+	})
+
+	It(`Sends KeepAlive message to others upon receiving KeepAlive`, func() {
+		p.WantToLead = func() bool { return false }
+		go b.NewMember(p)
+
+		mailbox <- b.Message{b.Ack, "1", ""}
+		mailbox <- b.Message{b.KeepAlive, "1", ""}
+
+		Eventually(allcast).Should(Receive(Equal(b.Message{b.KeepAlive, p.Id, ""})))
+	})
+
 	It(`Writes to buffer in a sequential manner`, func() {
 		go b.NewMember(p)
 
-		go func() {
-			mailbox <- b.Message{b.Ack, "1", ""}
-			mailbox <- b.Message{b.WantToLead, "1", ""}
-		}()
+		mailbox <- b.Message{b.Ack, "1", ""}
+		mailbox <- b.Message{b.WantToLead, "1", ""}
 
 		Eventually(buf).Should(gbytes.Say("Member 0: Hi\n"))
 		Eventually(buf).Should(gbytes.Say("Member 0: I want to be leader\n"))
@@ -89,6 +118,7 @@ var _ = Describe("NewController", func() {
 	var (
 		allcast   chan b.Message
 		mailboxes map[string]chan b.Message
+		cMbx      chan b.Message
 		p         b.ControllerParams
 	)
 
@@ -96,11 +126,14 @@ var _ = Describe("NewController", func() {
 	n := len(ids)
 
 	BeforeEach(func() {
+		buf = gbytes.NewBuffer()
+
 		allcast = make(chan b.Message, n)
 		mailboxes = make(map[string]chan b.Message)
+		cMbx = make(chan b.Message, n)
 
 		for _, id := range []string{"0", "1", "2"} {
-			mailboxes[id] = make(chan b.Message, 1)
+			mailboxes[id] = make(chan b.Message, n)
 		}
 
 		p = b.ControllerParams{
@@ -109,6 +142,7 @@ var _ = Describe("NewController", func() {
 			QuorumRule: b.PromoteFirstReachedHalfVotes,
 			Mailboxes:  mailboxes,
 			Allcast:    allcast,
+			Mailbox:    cMbx,
 		}
 	})
 

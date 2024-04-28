@@ -3,7 +3,9 @@ package board
 import (
 	"fmt"
 	"io"
+	"maps"
 	"math/rand"
+	"sync"
 )
 
 type MessageType int
@@ -16,11 +18,14 @@ type Message struct {
 }
 
 const (
-	Ack           MessageType = 0
-	ReadyToElect  MessageType = 1
-	WantToLead    MessageType = 2
-	AckCandidate  MessageType = 3
-	PromoteLeader MessageType = 4
+	Ack            MessageType = 0
+	ReadyToElect   MessageType = 1
+	WantToLead     MessageType = 2
+	AckCandidate   MessageType = 3
+	PromoteLeader  MessageType = 4
+	AckLeader      MessageType = 5
+	KeepAliveStart MessageType = 6
+	KeepAlive      MessageType = 7
 )
 
 type BoardMember struct {
@@ -32,7 +37,7 @@ type BoardMember struct {
 	ControllerMailbox chan Message
 	boardSize         int
 	peers             map[string]bool
-	isLeader          bool
+	leader            string
 }
 
 type MemberParams struct {
@@ -57,7 +62,7 @@ func NewMember(p MemberParams) {
 		ControllerMailbox: p.ControllerMailbox,
 		boardSize:         p.BoardSize,
 		peers:             make(map[string]bool),
-		isLeader:          false,
+		leader:            "",
 	}
 
 	pl(prefix + "Hi")
@@ -86,11 +91,23 @@ func NewMember(p MemberParams) {
 		case msg := <-m.Mailbox:
 			switch msg.T {
 			case WantToLead:
+				if m.leader != "" {
+					continue
+				}
+
 				pl(prefix + fmt.Sprintf("Accept member %s to be leader", msg.From))
 				m.Allcast <- Message{AckCandidate, m.Id, msg.From}
 			case PromoteLeader:
 				m.ControllerMailbox <- Message{Ack, m.Id, ""}
-				m.isLeader = true
+				m.Allcast <- Message{AckLeader, m.Id, ""}
+				m.leader = m.Id
+				m.Allcast <- Message{KeepAliveStart, m.Id, ""}
+			case AckLeader:
+				m.leader = msg.From
+			case KeepAliveStart:
+				m.Allcast <- Message{KeepAlive, m.Id, ""}
+			case KeepAlive:
+				m.Allcast <- Message{KeepAlive, m.Id, ""}
 			}
 		}
 	}
@@ -109,6 +126,7 @@ const (
 
 type Controller struct {
 	id         string
+	m          *sync.Mutex
 	members    map[string]role
 	quorumRule func(id string, polls map[string]int, members int) (string, bool)
 	mailbox    chan Message
@@ -122,19 +140,41 @@ func (c *Controller) recordPolls(msg Message) {
 	switch msg.T {
 	case AckCandidate:
 		cId := msg.Body
-		c.candidates[cId]++
+
+		c.m.Lock()
+
 		c.maybePromoteLeader(cId)
+
+		c.m.Unlock()
 	}
 }
 
 func (c *Controller) maybePromoteLeader(id string) {
-	if reason, ok := c.quorumRule(id, c.candidates, len(c.members)); ok {
-		c.mailboxes[id] <- Message{PromoteLeader, c.id, reason}
-		<-c.mailbox
-		c.members[id] = leader
-		c.candidates = make(map[string]int)
-		c.pl(reason)
+	if c.hasLeader() {
+		return
 	}
+
+	pendingPolls := maps.Clone(c.candidates)
+	pendingPolls[id]++
+	reason, ok := c.quorumRule(id, pendingPolls, len(c.members))
+	if !ok {
+		c.candidates[id]++
+	}
+
+	c.mailboxes[id] <- Message{PromoteLeader, c.id, reason}
+	<-c.mailbox
+	c.members[id] = leader
+	c.candidates = make(map[string]int)
+	c.pl(reason)
+}
+
+func (c *Controller) hasLeader() bool {
+	for _, role := range c.members {
+		if role == leader {
+			return true
+		}
+	}
+	return false
 }
 
 type ControllerParams struct {
@@ -147,6 +187,8 @@ type ControllerParams struct {
 }
 
 func NewController(p ControllerParams) {
+	var m sync.Mutex
+
 	members := make(map[string]role)
 	for _, id := range p.Members {
 		members[id] = follower
@@ -161,6 +203,7 @@ func NewController(p ControllerParams) {
 		allcast:    p.Allcast,
 		candidates: make(map[string]int),
 		pl:         func(s string) { fmt.Fprintln(p.Writer, s) },
+		m:          &m,
 	}
 
 	for {
