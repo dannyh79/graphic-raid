@@ -65,10 +65,8 @@ var _ = Describe("NewMember", func() {
 
 		go b.NewMember(p)
 
-		go func() {
-			mailbox <- b.Message{b.Ack, "1", ""}
-			mailbox <- b.Message{b.WantToLead, "1", ""}
-		}()
+		mailbox <- b.Message{b.Ack, "1", ""}
+		mailbox <- b.Message{b.WantToLead, "1", ""}
 
 		Eventually(buf).Should(gbytes.Say("Member 0: Accept member 1 to be leader\n"))
 	})
@@ -117,9 +115,7 @@ var _ = Describe("NewController", func() {
 	It(`Broadcasts message to other mailboxes`, func() {
 		go b.NewController(p)
 
-		go func() {
-			allcast <- b.Message{b.Ack, "0", ""}
-		}()
+		allcast <- b.Message{b.Ack, "0", ""}
 
 		Eventually(mailboxes["1"]).Should(Receive(Equal(b.Message{b.Ack, "0", ""})))
 		Eventually(mailboxes["2"]).Should(Receive(Equal(b.Message{b.Ack, "0", ""})))
