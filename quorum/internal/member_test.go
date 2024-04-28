@@ -53,7 +53,7 @@ var _ = Describe("NewMember", func() {
 		Eventually(buf).Should(gbytes.Say("Member 0: I want to be leader\n"))
 	})
 
-	It(`does NOT write "Member 0: I want to be leader" to buffer`, func() {
+	It(`Does NOT write "Member 0: I want to be leader" to buffer`, func() {
 		p.WantToLead = func() bool { return false }
 
 		go board.NewMember(p)
@@ -157,7 +157,7 @@ var _ = Describe("Interaction between 2 BoardMembers", func() {
 			}
 		})
 
-		It(`does NOT write "Member [01]: Accept member [01] to be leader" to buffer`, func() {
+		It(`Does NOT write "Member [01]: Accept member [01] to be leader" to buffer`, func() {
 			go board.NewController(cp)
 			go board.NewMember(p1)
 			go board.NewMember(p2)
@@ -219,7 +219,7 @@ var _ = Describe("Interaction between 2 BoardMembers", func() {
 			}
 		})
 
-		It(`does NOT write "Member [01]: Accept member 0 to be leader" to buffer`, func() {
+		It(`Does NOT write "Member [01]: Accept member 0 to be leader" to buffer`, func() {
 			go board.NewController(cp)
 			go board.NewMember(p1)
 			go board.NewMember(p2)
