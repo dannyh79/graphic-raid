@@ -12,6 +12,7 @@ type BoardMember struct {
 	WantToLead   func() bool
 	Ack          chan string
 	ReadyToElect chan bool
+	Candidate    chan string
 }
 
 type MemberParams struct {
@@ -20,6 +21,7 @@ type MemberParams struct {
 	WantToLead   func() bool
 	Ack          chan string
 	ReadyToElect chan bool
+	Candidate    chan string
 }
 
 func NewMember(p MemberParams) {
@@ -27,18 +29,25 @@ func NewMember(p MemberParams) {
 	pl := func(s string) { fmt.Fprintln(p.Writer, s) }
 
 	m := BoardMember{
+		Id:           p.Id,
 		WantToLead:   p.WantToLead,
 		Ack:          p.Ack,
 		ReadyToElect: p.ReadyToElect,
+		Candidate:    p.Candidate,
 	}
 
 	pl(prefix + "Hi")
-	m.Ack <- p.Id
+	m.Ack <- m.Id
 
-	select {
-	case <-m.ReadyToElect:
-		if m.WantToLead() {
-			pl(prefix + "I want to be leader")
+	for {
+		select {
+		case <-m.ReadyToElect:
+			if m.WantToLead() {
+				pl(prefix + "I want to be leader")
+				m.Candidate <- m.Id
+			}
+		case id := <-m.Candidate:
+			pl(prefix + fmt.Sprintf("Accept member %s to be leader", id))
 		}
 	}
 }

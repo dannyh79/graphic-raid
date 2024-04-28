@@ -14,6 +14,7 @@ var (
 	buf          *gbytes.Buffer
 	ack          chan string
 	readyToElect chan bool
+	candidate    chan string
 )
 
 var _ = Describe("NewMember", func() {
@@ -26,12 +27,14 @@ var _ = Describe("NewMember", func() {
 
 		ack = make(chan string)
 		readyToElect = make(chan bool)
+		candidate = make(chan string)
 		p = board.MemberParams{
 			Id:           "0",
 			Writer:       buf,
 			WantToLead:   func() bool { return true },
 			Ack:          ack,
 			ReadyToElect: readyToElect,
+			Candidate:    candidate,
 		}
 	})
 
@@ -61,14 +64,29 @@ var _ = Describe("NewMember", func() {
 		Eventually(buf).Should(Not(gbytes.Say("Member 0: I want to be leader\n")))
 	})
 
+	It(`Writes "Member 0: Accept member 1 to be leader" to buffer`, func() {
+		p.WantToLead = func() bool { return false }
+
+		go board.NewMember(p)
+
+		<-ack
+		readyToElect <- true
+		candidate <- "1"
+
+		Eventually(buf).Should(gbytes.Say("Member 0: Accept member 1 to be leader\n"))
+	})
+
 	It(`Writes to buffer in a sequential manner`, func() {
 		go board.NewMember(p)
 
 		<-ack
 		readyToElect <- true
+		<-candidate
+		candidate <- "1"
 
 		Eventually(buf).Should(gbytes.Say("Member 0: Hi\n"))
 		Eventually(buf).Should(gbytes.Say("Member 0: I want to be leader\n"))
+		Eventually(buf).Should(gbytes.Say("Member 0: Accept member 1 to be leader\n"))
 	})
 })
 
@@ -110,21 +128,8 @@ var _ = Describe("Interaction between 2 BoardMembers", func() {
 		buf = gbytes.NewBuffer()
 		ack = make(chan string)
 		readyToElect = make(chan bool)
+		candidate = make(chan string)
 
-		p1 = board.MemberParams{
-			Id:           "0",
-			Writer:       buf,
-			WantToLead:   func() bool { return true },
-			Ack:          ack,
-			ReadyToElect: readyToElect,
-		}
-		p2 = board.MemberParams{
-			Id:           "1",
-			Writer:       buf,
-			WantToLead:   func() bool { return true },
-			Ack:          ack,
-			ReadyToElect: readyToElect,
-		}
 		cp = board.ControllerParams{
 			Members:      2,
 			Ack:          ack,
@@ -140,6 +145,7 @@ var _ = Describe("Interaction between 2 BoardMembers", func() {
 				WantToLead:   func() bool { return true },
 				Ack:          ack,
 				ReadyToElect: readyToElect,
+				Candidate:    candidate,
 			}
 			p2 = board.MemberParams{
 				Id:           "1",
@@ -147,6 +153,7 @@ var _ = Describe("Interaction between 2 BoardMembers", func() {
 				WantToLead:   func() bool { return true },
 				Ack:          ack,
 				ReadyToElect: readyToElect,
+				Candidate:    candidate,
 			}
 		})
 
@@ -157,7 +164,69 @@ var _ = Describe("Interaction between 2 BoardMembers", func() {
 
 			Eventually(buf, 2).Should(gbytes.Say("Member [01]: Hi\n"))
 			Eventually(buf, 2).Should(gbytes.Say("Member [01]: I want to be leader\n"))
-			Eventually(buf).Should(Not(gbytes.Say("Member [01]: Accept member [01] to be leader\n")))
+			Eventually(buf, 2).Should(Not(gbytes.Say("Member [01]: Accept member [01] to be leader\n")))
+		})
+	})
+
+	Context("when ONLY one wants to be the leader", func() {
+		BeforeEach(func() {
+			p1 = board.MemberParams{
+				Id:           "0",
+				Writer:       buf,
+				WantToLead:   func() bool { return true },
+				Ack:          ack,
+				ReadyToElect: readyToElect,
+				Candidate:    candidate,
+			}
+			p2 = board.MemberParams{
+				Id:           "1",
+				Writer:       buf,
+				WantToLead:   func() bool { return false },
+				Ack:          ack,
+				ReadyToElect: readyToElect,
+				Candidate:    candidate,
+			}
+		})
+
+		It(`Writes "Member 1: Accept member 0 to be leader" to buffer`, func() {
+			go board.NewController(cp)
+			go board.NewMember(p1)
+			go board.NewMember(p2)
+
+			Eventually(buf, 2).Should(gbytes.Say("Member [01]: Hi\n"))
+			Eventually(buf).Should(gbytes.Say("Member 0: I want to be leader\n"))
+			Eventually(buf).Should(gbytes.Say("Member 1: Accept member 0 to be leader\n"))
+		})
+	})
+
+	Context("when no one wants to be the leader", func() {
+		BeforeEach(func() {
+			p1 = board.MemberParams{
+				Id:           "0",
+				Writer:       buf,
+				WantToLead:   func() bool { return false },
+				Ack:          ack,
+				ReadyToElect: readyToElect,
+				Candidate:    candidate,
+			}
+			p2 = board.MemberParams{
+				Id:           "1",
+				Writer:       buf,
+				WantToLead:   func() bool { return false },
+				Ack:          ack,
+				ReadyToElect: readyToElect,
+				Candidate:    candidate,
+			}
+		})
+
+		It(`does NOT write "Member [01]: Accept member 0 to be leader" to buffer`, func() {
+			go board.NewController(cp)
+			go board.NewMember(p1)
+			go board.NewMember(p2)
+
+			Eventually(buf, 2).Should(gbytes.Say("Member [01]: Hi\n"))
+			Eventually(buf).Should(Not(gbytes.Say("Member [01]: I want to be leader\n")))
+			Eventually(buf, 2).Should(Not(gbytes.Say("Member [01]: Accept member [01] to be leader\n")))
 		})
 	})
 })
