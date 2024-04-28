@@ -13,6 +13,7 @@ type BoardMember struct {
 	Ack          chan string
 	ReadyToElect chan bool
 	Candidate    chan string
+	AckCandidate chan string
 }
 
 type MemberParams struct {
@@ -22,6 +23,7 @@ type MemberParams struct {
 	Ack          chan string
 	ReadyToElect chan bool
 	Candidate    chan string
+	AckCandidate chan string
 }
 
 func NewMember(p MemberParams) {
@@ -34,6 +36,7 @@ func NewMember(p MemberParams) {
 		Ack:          p.Ack,
 		ReadyToElect: p.ReadyToElect,
 		Candidate:    p.Candidate,
+		AckCandidate: p.AckCandidate,
 	}
 
 	pl(prefix + "Hi")
@@ -47,7 +50,10 @@ func NewMember(p MemberParams) {
 				m.Candidate <- m.Id
 			}
 		case id := <-m.Candidate:
-			pl(prefix + fmt.Sprintf("Accept member %s to be leader", id))
+			if id != m.Id {
+				pl(prefix + fmt.Sprintf("Accept member %s to be leader", id))
+				m.AckCandidate <- id
+			}
 		}
 	}
 }

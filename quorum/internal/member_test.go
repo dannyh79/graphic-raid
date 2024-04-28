@@ -15,6 +15,7 @@ var (
 	ack          chan string
 	readyToElect chan bool
 	candidate    chan string
+	ackCandidate chan string
 )
 
 var _ = Describe("NewMember", func() {
@@ -28,6 +29,7 @@ var _ = Describe("NewMember", func() {
 		ack = make(chan string)
 		readyToElect = make(chan bool)
 		candidate = make(chan string)
+		ackCandidate = make(chan string)
 		p = board.MemberParams{
 			Id:           "0",
 			Writer:       buf,
@@ -35,6 +37,7 @@ var _ = Describe("NewMember", func() {
 			Ack:          ack,
 			ReadyToElect: readyToElect,
 			Candidate:    candidate,
+			AckCandidate: ackCandidate,
 		}
 	})
 
@@ -66,13 +69,14 @@ var _ = Describe("NewMember", func() {
 
 	It(`Writes "Member 0: Accept member 1 to be leader" to buffer`, func() {
 		p.WantToLead = func() bool { return false }
-
 		go board.NewMember(p)
 
 		<-ack
 		readyToElect <- true
-		candidate <- "1"
+		c := "1"
+		candidate <- c
 
+		Eventually(<-ackCandidate).Should(Equal(c))
 		Eventually(buf).Should(gbytes.Say("Member 0: Accept member 1 to be leader\n"))
 	})
 
@@ -118,10 +122,8 @@ var _ = Describe("NewController", func() {
 
 var _ = Describe("Interaction between 2 BoardMembers", func() {
 	var (
-		p1, p2       board.MemberParams
-		cp           board.ControllerParams
-		ack          chan string
-		readyToElect chan bool
+		p1, p2 board.MemberParams
+		cp     board.ControllerParams
 	)
 
 	BeforeEach(func() {
@@ -129,6 +131,7 @@ var _ = Describe("Interaction between 2 BoardMembers", func() {
 		ack = make(chan string)
 		readyToElect = make(chan bool)
 		candidate = make(chan string)
+		ackCandidate = make(chan string)
 
 		cp = board.ControllerParams{
 			Members:      2,
@@ -146,6 +149,7 @@ var _ = Describe("Interaction between 2 BoardMembers", func() {
 				Ack:          ack,
 				ReadyToElect: readyToElect,
 				Candidate:    candidate,
+				AckCandidate: ackCandidate,
 			}
 			p2 = board.MemberParams{
 				Id:           "1",
@@ -154,6 +158,7 @@ var _ = Describe("Interaction between 2 BoardMembers", func() {
 				Ack:          ack,
 				ReadyToElect: readyToElect,
 				Candidate:    candidate,
+				AckCandidate: ackCandidate,
 			}
 		})
 
@@ -177,6 +182,7 @@ var _ = Describe("Interaction between 2 BoardMembers", func() {
 				Ack:          ack,
 				ReadyToElect: readyToElect,
 				Candidate:    candidate,
+				AckCandidate: ackCandidate,
 			}
 			p2 = board.MemberParams{
 				Id:           "1",
@@ -185,6 +191,7 @@ var _ = Describe("Interaction between 2 BoardMembers", func() {
 				Ack:          ack,
 				ReadyToElect: readyToElect,
 				Candidate:    candidate,
+				AckCandidate: ackCandidate,
 			}
 		})
 
@@ -208,6 +215,7 @@ var _ = Describe("Interaction between 2 BoardMembers", func() {
 				Ack:          ack,
 				ReadyToElect: readyToElect,
 				Candidate:    candidate,
+				AckCandidate: ackCandidate,
 			}
 			p2 = board.MemberParams{
 				Id:           "1",
@@ -216,6 +224,7 @@ var _ = Describe("Interaction between 2 BoardMembers", func() {
 				Ack:          ack,
 				ReadyToElect: readyToElect,
 				Candidate:    candidate,
+				AckCandidate: ackCandidate,
 			}
 		})
 
@@ -242,6 +251,7 @@ var _ = Describe("Interaction between 3 BoardMembers", func() {
 		ack = make(chan string)
 		readyToElect = make(chan bool)
 		candidate = make(chan string)
+		ackCandidate = make(chan string)
 
 		p1 = board.MemberParams{
 			Id:           "0",
@@ -250,6 +260,7 @@ var _ = Describe("Interaction between 3 BoardMembers", func() {
 			Ack:          ack,
 			ReadyToElect: readyToElect,
 			Candidate:    candidate,
+			AckCandidate: ackCandidate,
 		}
 		p2 = board.MemberParams{
 			Id:           "1",
@@ -258,6 +269,7 @@ var _ = Describe("Interaction between 3 BoardMembers", func() {
 			Ack:          ack,
 			ReadyToElect: readyToElect,
 			Candidate:    candidate,
+			AckCandidate: ackCandidate,
 		}
 		p3 = board.MemberParams{
 			Id:           "2",
@@ -266,6 +278,7 @@ var _ = Describe("Interaction between 3 BoardMembers", func() {
 			Ack:          ack,
 			ReadyToElect: readyToElect,
 			Candidate:    candidate,
+			AckCandidate: ackCandidate,
 		}
 		cp = board.ControllerParams{
 			Members:      3,
