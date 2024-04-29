@@ -1,5 +1,7 @@
 # Graphic Raid
 
+![CI](https://github.com/dannyh79/graphic-raid/actions/workflows/test.yml/badge.svg)
+
 ## Status
 
 ### Classroom
