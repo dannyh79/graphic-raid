@@ -117,6 +117,8 @@ func NewMember(p MemberParams) {
 				m.Allcast <- Message{KeepAlive, m.Id, ""}
 			case KeepAlive:
 				m.Allcast <- Message{KeepAlive, m.Id, ""}
+			case KeepAliveFail:
+				pl(prefix + fmt.Sprintf("failed heartbeat with Member %s", msg.Body))
 			case Kill:
 				return
 			}

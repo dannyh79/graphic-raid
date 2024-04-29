@@ -78,6 +78,15 @@ var _ = Describe("NewMember", func() {
 		Eventually(buf).Should(gbytes.Say("Member 0: Accept member 1 to be leader\n"))
 	})
 
+	It(`Writes "Member 0: failed heartbeat with Member 1"`, func() {
+		go b.NewMember(p)
+
+		mailbox <- b.Message{b.Ack, "1", ""}
+		mailbox <- b.Message{b.KeepAliveFail, b.ControllerId, "1"}
+
+		Eventually(buf).Should(gbytes.Say("Member 0: failed heartbeat with Member 1\n"))
+	})
+
 	It(`Sends KeepAliveStart message to others upon promoted`, func() {
 		go b.NewMember(p)
 
