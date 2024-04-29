@@ -1,0 +1,31 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - README.md
+      - .dockerignore
+      - .editorconfig
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - README.md
+      - Dockerfile
+      - .dockerignore
+      - .editorconfig
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.22.1'
+
+    - name: Run Go tests
+      run: go run github.com/onsi/ginkgo/v2/ginkgo -r --randomize-suites --trace --fail-on-pending --keep-going
