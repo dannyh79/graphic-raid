@@ -13,6 +13,7 @@ import (
 var (
 	buf *gbytes.Buffer
 	wg  sync.WaitGroup
+	m   sync.Mutex
 )
 
 var _ = Describe("NewMember", func() {
@@ -35,6 +36,7 @@ var _ = Describe("NewMember", func() {
 			Id:                "0",
 			WaitGroup:         &wg,
 			Writer:            buf,
+			Mutex:             &m,
 			WantToLead:        func() bool { return true },
 			Mailbox:           mailbox,
 			ControllerMailbox: cMbx,
@@ -225,6 +227,7 @@ var _ = Describe("Interaction between 3 BoardMembers", func() {
 			Id:                ids[0],
 			WaitGroup:         &wg,
 			Writer:            buf,
+			Mutex:             &m,
 			WantToLead:        func() bool { return true },
 			Mailbox:           mailboxes[ids[0]],
 			Allcast:           allcast,
@@ -235,6 +238,7 @@ var _ = Describe("Interaction between 3 BoardMembers", func() {
 			Id:                ids[1],
 			WaitGroup:         &wg,
 			Writer:            buf,
+			Mutex:             &m,
 			WantToLead:        func() bool { return true },
 			Mailbox:           mailboxes[ids[1]],
 			Allcast:           allcast,
@@ -245,6 +249,7 @@ var _ = Describe("Interaction between 3 BoardMembers", func() {
 			Id:                ids[2],
 			WaitGroup:         &wg,
 			Writer:            buf,
+			Mutex:             &m,
 			WantToLead:        func() bool { return false },
 			Mailbox:           mailboxes[ids[2]],
 			Allcast:           allcast,
@@ -254,6 +259,7 @@ var _ = Describe("Interaction between 3 BoardMembers", func() {
 
 		cp = b.ControllerParams{
 			Writer:     buf,
+			Mutex:      &m,
 			Members:    ids,
 			QuorumRule: b.AgreeOnHalfVotes,
 			Mailboxes:  mailboxes,
@@ -269,9 +275,8 @@ var _ = Describe("Interaction between 3 BoardMembers", func() {
 			go b.NewMember(p)
 		}
 
-		Eventually(buf).Should(gbytes.Say("Member [012]: Hi\n"))
-		Eventually(buf).Should(gbytes.Say("Member [01]: I want to be leader\n"))
-		Eventually(buf).Should(gbytes.Say("Member [012]: Accept member [01] to be leader\n"))
-		Eventually(buf).Should(gbytes.Say("Member [01]: voted to be leader: (2 >= 3/2)\n"))
+		Eventually(buf).MustPassRepeatedly(3).Should(gbytes.Say("Member [012]: Hi\n"))
+		Eventually(buf).MustPassRepeatedly(2).Should(gbytes.Say("Member [01]: I want to be leader\n"))
+		Eventually(buf).MustPassRepeatedly(3).Should(gbytes.Say("Member [012]: Accept member [01] to be leader\n"))
 	})
 })

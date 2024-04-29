@@ -3,7 +3,6 @@ package board
 import (
 	"fmt"
 	"io"
-	"maps"
 	"math/rand"
 	"sync"
 )
@@ -40,11 +39,14 @@ type BoardMember struct {
 	boardSize         int
 	peers             map[string]bool
 	leader            string
+	m                 *sync.Mutex
+	pl                func(string)
 }
 
 type MemberParams struct {
 	Id                string
 	WaitGroup         *sync.WaitGroup
+	Mutex             *sync.Mutex
 	Writer            io.Writer
 	WantToLead        func() bool
 	Mailbox           <-chan Message
@@ -68,6 +70,7 @@ func NewMember(p MemberParams) {
 		boardSize:         p.BoardSize,
 		peers:             make(map[string]bool),
 		leader:            "",
+		pl:                SyncWriter(p.Writer, p.Mutex),
 	}
 
 	pl(prefix + "Hi")
@@ -139,7 +142,6 @@ const (
 
 type Controller struct {
 	id         string
-	m          *sync.Mutex
 	members    map[string]role
 	quorumRule func(topic, id string, polls map[string]int, members int) (string, bool)
 	mailbox    chan Message
@@ -154,11 +156,8 @@ func (c *Controller) recordPolls(msg Message) {
 	case AckCandidate:
 		cId := msg.Body
 
-		c.m.Lock()
-
+		c.ballot[cId]++
 		c.maybePromoteLeader(cId)
-
-		c.m.Unlock()
 	}
 }
 
@@ -167,12 +166,9 @@ func (c *Controller) maybePromoteLeader(id string) {
 		return
 	}
 
-	pendingPolls := maps.Clone(c.ballot)
-	pendingPolls[id]++
 	t := fmt.Sprintf("Member %s: voted to be leader", id)
-	reason, ok := c.quorumRule(t, id, pendingPolls, len(c.members))
+	reason, ok := c.quorumRule(t, id, c.ballot, len(c.members))
 	if !ok {
-		c.ballot[id]++
 		return
 	}
 
@@ -193,6 +189,7 @@ func (c *Controller) hasLeader() bool {
 }
 
 type ControllerParams struct {
+	Mutex      *sync.Mutex
 	Writer     io.Writer
 	Members    []string
 	QuorumRule func(topic, id string, polls map[string]int, members int) (string, bool)
@@ -202,8 +199,6 @@ type ControllerParams struct {
 }
 
 func NewController(p ControllerParams) {
-	var m sync.Mutex
-
 	members := make(map[string]role)
 	for _, id := range p.Members {
 		members[id] = follower
@@ -217,8 +212,7 @@ func NewController(p ControllerParams) {
 		mailboxes:  p.Mailboxes,
 		allcast:    p.Allcast,
 		ballot:     make(map[string]int),
-		pl:         func(s string) { fmt.Fprintln(p.Writer, s) },
-		m:          &m,
+		pl:         SyncWriter(p.Writer, p.Mutex),
 	}
 
 	for {
@@ -243,4 +237,13 @@ func AgreeOnHalfVotes(topic, id string, ballot map[string]int, members int) (rea
 		return fmt.Sprintf("%s: (%v >= %v/2)", topic, ballot[id], members), true
 	}
 	return fmt.Sprintf("Quorum failed: (1 BoardMember left)"), false
+}
+
+func SyncWriter(w io.Writer, m *sync.Mutex) func(s string) {
+	return func(s string) {
+		m.Lock()
+		defer m.Unlock()
+
+		fmt.Fprintln(w, s)
+	}
 }
