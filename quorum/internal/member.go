@@ -141,7 +141,7 @@ type Controller struct {
 	id         string
 	m          *sync.Mutex
 	members    map[string]role
-	quorumRule func(id string, polls map[string]int, members int) (string, bool)
+	quorumRule func(topic, id string, polls map[string]int, members int) (string, bool)
 	mailbox    chan Message
 	mailboxes  map[string]chan Message
 	allcast    chan Message
@@ -169,9 +169,11 @@ func (c *Controller) maybePromoteLeader(id string) {
 
 	pendingPolls := maps.Clone(c.ballot)
 	pendingPolls[id]++
-	reason, ok := c.quorumRule(id, pendingPolls, len(c.members))
+	t := fmt.Sprintf("Member %s: voted to be leader", id)
+	reason, ok := c.quorumRule(t, id, pendingPolls, len(c.members))
 	if !ok {
 		c.ballot[id]++
+		return
 	}
 
 	c.mailboxes[id] <- Message{PromoteLeader, c.id, reason}
@@ -193,7 +195,7 @@ func (c *Controller) hasLeader() bool {
 type ControllerParams struct {
 	Writer     io.Writer
 	Members    []string
-	QuorumRule func(id string, polls map[string]int, members int) (string, bool)
+	QuorumRule func(topic, id string, polls map[string]int, members int) (string, bool)
 	Mailbox    chan Message
 	Mailboxes  map[string]chan Message
 	Allcast    chan Message
@@ -236,9 +238,9 @@ func NewController(p ControllerParams) {
 	}
 }
 
-func PromoteFirstReachedHalfVotes(id string, ballot map[string]int, members int) (reason string, ok bool) {
-	if ballot[id] >= members/2 {
-		return fmt.Sprintf("Member %s voted to be leader", id), true
+func AgreeOnHalfVotes(topic, id string, ballot map[string]int, members int) (reason string, ok bool) {
+	if float32(ballot[id]) >= float32(members)/2 {
+		return fmt.Sprintf("%s: (%v >= %v/2)", topic, ballot[id], members), true
 	}
-	return fmt.Sprintf("Quorum failed: (1 < %v/2)", members), false
+	return fmt.Sprintf("Quorum failed: (1 BoardMember left)"), false
 }
