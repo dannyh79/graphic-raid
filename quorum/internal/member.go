@@ -145,7 +145,7 @@ type Controller struct {
 	mailbox    chan Message
 	mailboxes  map[string]chan Message
 	allcast    chan Message
-	candidates map[string]int
+	ballot     map[string]int
 	pl         func(string)
 }
 
@@ -167,17 +167,17 @@ func (c *Controller) maybePromoteLeader(id string) {
 		return
 	}
 
-	pendingPolls := maps.Clone(c.candidates)
+	pendingPolls := maps.Clone(c.ballot)
 	pendingPolls[id]++
 	reason, ok := c.quorumRule(id, pendingPolls, len(c.members))
 	if !ok {
-		c.candidates[id]++
+		c.ballot[id]++
 	}
 
 	c.mailboxes[id] <- Message{PromoteLeader, c.id, reason}
 	<-c.mailbox
 	c.members[id] = leader
-	c.candidates = make(map[string]int)
+	c.ballot = make(map[string]int)
 	c.pl(reason)
 }
 
@@ -214,7 +214,7 @@ func NewController(p ControllerParams) {
 		mailbox:    p.Mailbox,
 		mailboxes:  p.Mailboxes,
 		allcast:    p.Allcast,
-		candidates: make(map[string]int),
+		ballot:     make(map[string]int),
 		pl:         func(s string) { fmt.Fprintln(p.Writer, s) },
 		m:          &m,
 	}
@@ -236,8 +236,8 @@ func NewController(p ControllerParams) {
 	}
 }
 
-func PromoteFirstReachedHalfVotes(id string, polls map[string]int, members int) (reason string, ok bool) {
-	if polls[id] >= members/2 {
+func PromoteFirstReachedHalfVotes(id string, ballot map[string]int, members int) (reason string, ok bool) {
+	if ballot[id] >= members/2 {
 		return fmt.Sprintf("Member %s voted to be leader", id), true
 	}
 	return fmt.Sprintf("Quorum failed: (1 < %v/2)", members), false
